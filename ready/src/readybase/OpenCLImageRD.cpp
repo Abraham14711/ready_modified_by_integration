@@ -218,7 +218,7 @@ std::vector<vtkSmartPointer<vtkImageData>> OpenCLImageRD::SumImageScalars(const 
     const int NC = this->GetNumberOfChemicals();
     
     //===================
-    std::ofstream file("/Users/abraham_barrett/Desktop/sum.txt");
+    std::ofstream file("testing_sum_values.txt");
     //===================
     std::vector<vtkSmartPointer<vtkImageData>> copied_images(NC, nullptr);
     for (int ic=0; ic < NC; ic++) {
