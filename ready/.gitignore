@@ -1,0 +1,5 @@
+build
+
+# Mac stuff
+.DS_Store
+.qodo
