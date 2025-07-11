@@ -31,6 +31,13 @@ using namespace OpenCL_utils;
 #include <vector>
 #include <vtkSmartPointer.h>
 
+//=====================
+//for testing integration values in temporary file
+#include <iostream>
+#include <fstream>
+//=====================
+
+
 
 // VTK:
 #include <vtkImageData.h>
@@ -203,12 +210,16 @@ void OpenCLImageRD::CreateOpenCLBuffers()
 // ----------------------------------------------------------------------------------------------------------------
 
 std::vector<vtkSmartPointer<vtkImageData>> OpenCLImageRD::SumImageScalars(const std::vector<vtkSmartPointer<vtkImageData>>& images) {
+    
     double totalSum = 0.0;
     int X = this->GetX();
     int Y = this->GetY();
     int Z = this->GetZ();
     const int NC = this->GetNumberOfChemicals();
     
+    //===================
+    std::ofstream file("testing_sum_values.txt");
+    //===================
     std::vector<vtkSmartPointer<vtkImageData>> copied_images(NC, nullptr);
     for (int ic=0; ic < NC; ic++) {
         copied_images[ic] = vtkSmartPointer<vtkImageData>::New();
@@ -227,11 +238,25 @@ std::vector<vtkSmartPointer<vtkImageData>> OpenCLImageRD::SumImageScalars(const 
                 for(int iz = 0; iz < Z; iz++) {
                     float val = this->GetImage(ic)->GetScalarComponentAsFloat(ix,iy,iz,0);
                     iSum += val; 
+                    file <<"chemical: "<<ic <<" X: "<< ix << " Y: "<< iy << " Z: "<< iz << " val: "<<val << std::endl;
+                    std::cout<<val<<std::endl;
                 }
             }
         }
-        copied_images[ic]->SetScalarComponentFromFloat(X,Y,Z,1,iSum);
+        
+     
+        file<<"Sum: "<< iSum << std::endl;
+        
+        for ( int ix =0; ix < X; ix++){
+            for ( int iy =0; iy < Y; iy++){
+                for ( int iz =0; iz < Z; iz++){
+                    copied_images[ic]->SetScalarComponentFromFloat(ix,iy,iz,0,iSum);
+                }
+            }
+        }
+    float eps = 1e-5;
     }
+    //file.close();
     return copied_images;
     // for (const auto& image : images) {
     //     if (!image) continue; // Пропускаем nullptr
@@ -284,7 +309,7 @@ void OpenCLImageRD::WriteToOpenCLBuffersIfNeeded()
         throwOnError(ret,"OpenCLImageRD::WriteToOpenCLBuffers : buffer writing failed: ");
 
         void * temp = data_integrals[ic]->GetScalarPointer();
-        cl_int ret1 = clEnqueueWriteBuffer(this->command_queue,this->intergral_buffers[0][ic], CL_TRUE, 0, MEM_SIZE, data, 0, NULL, NULL);
+        cl_int ret1 = clEnqueueWriteBuffer(this->command_queue,this->intergral_buffers[0][ic], CL_TRUE, 0, MEM_SIZE, temp, 0, NULL, NULL);
         throwOnError(ret1,"OpenCLImageRD::WriteToOpenCLBuffers : buffer writing failed: ");
 
     }
@@ -360,26 +385,22 @@ void OpenCLImageRD::InternalUpdate(int n_steps)
     this->ReloadKernelIfNeeded();
     this->WriteToOpenCLBuffersIfNeeded();
 
+
     cl_int ret;
     int iBuffer;
-    const int NC = this->GetNumberOfChemicals();
 
+    const int NC = this->GetNumberOfChemicals();
+    
     for(int it=0;it<n_steps;it++)
     {
-        // govno
-        // this->GetIntegrals();
-
-        // for(int ic=0; ic < NC;ic++)
-        // {
-        //     ret = clSetKernelArg(this->kernel, ic, sizeof(cl_mem), (void *)&this->intergral_buffers[0][ic]);
-        //     throwOnError(ret,"OpenCLImageRD::InternalUpdate : clSetKernelArg failed: ");
-
-        // }
-
+        string temp_buffer_values = "";
         for(int ic=0;ic<NC;ic++){
-            ret = clSetKernelArg(this->kernel, NC, sizeof(cl_mem), (void *)&this->intergral_buffers[0][ic]);
+            // temp_buffer_values += std::to_string(*reinterpret_cast<uint64_t*>(intergral_buffers[0][ic])) + " ";
+
+            ret = clSetKernelArg(this->kernel, ic, sizeof(cl_mem), (void *)&this->intergral_buffers[0][ic]);
             throwOnError(ret,"OpenCLImageRD::InternalUpdate : clSetKernelArg failed: ");
         }
+        // throwOnError(1,temp_buffer_values.c_str());
 
 
         for(int io=0;io<2;io++) // first input buffers (io=0) then output buffers (io=1)
@@ -388,10 +409,14 @@ void OpenCLImageRD::InternalUpdate(int n_steps)
             for(int ic=0;ic<NC;ic++)
             {
                 // a_in, b_in, ... a_out, b_out ...
-                ret = clSetKernelArg(this->kernel, io*(NC + 1) + ic, sizeof(cl_mem), (void *)&this->buffers[iBuffer][ic]);
+                ret = clSetKernelArg(this->kernel, NC*( io + 1 ) + ic, sizeof(cl_mem), (void *)&this->buffers[iBuffer][ic]);
                 throwOnError(ret,"OpenCLImageRD::InternalUpdate : clSetKernelArg failed: ");
             }
         }
+        cl_uint num_args;
+        clGetKernelInfo(kernel, CL_KERNEL_NUM_ARGS, sizeof(num_args), &num_args, NULL);
+        
+        
         ret = clEnqueueNDRangeKernel(this->command_queue, this->kernel, 3, // dimensions
             NULL, this->global_range, this->use_local_memory ? this->local_work_size : NULL,
             0, NULL, NULL);
@@ -400,6 +425,31 @@ void OpenCLImageRD::InternalUpdate(int n_steps)
             ostringstream oss;
             oss << "OpenCLImageRD::InternalUpdate : clEnqueueNDRangeKernel failed.\n";
             oss << "Local work size: " << this->local_work_size[0] << " x " << this->local_work_size[1] << " x " << this->local_work_size[2] << "\n";
+//--------
+            oss<<"Global range: ["<< global_range[0]<<" "<< global_range[1]<<" "<< global_range[2]<<"]\n";
+            oss<<"Local work size: ["<< local_work_size[0]<<" "<< local_work_size[1]<<" "<< local_work_size[2]<<"]\n";
+//--------
+            oss <<"Kernel expects arguments" << num_args<<" "<<NC<<"\n";
+            //-------------------------------------------
+            for (cl_uint i = 0; i < num_args; i++) {
+                size_t size;
+                char* value;
+
+                // Тип аргумента
+                clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_TYPE_NAME, 0, NULL, &size);
+                value = (char*)malloc(size);
+                clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_TYPE_NAME, size, value, NULL);
+                oss<< "Arg:" << i <<" type: "<< value<<"\n";
+                free(value);
+
+                // Имя аргумента
+                clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_NAME, 0, NULL, &size);
+                value = (char*)malloc(size);
+                clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_NAME, size, value, NULL);
+                oss<< "Arg:" << i <<" type: "<< value<<"\n";
+                free(value);
+            }
+            //-------------------------------------------
             throwOnError(ret, oss.str().c_str());
         }
         this->iCurrentBuffer = 1 - this->iCurrentBuffer;
