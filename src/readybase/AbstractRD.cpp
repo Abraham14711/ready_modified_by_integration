@@ -23,6 +23,7 @@
 #include <algorithm>
 
 // SSE:
+#undef USE_SSE
 #if USE_SSE
 #include <xmmintrin.h>
 #endif
