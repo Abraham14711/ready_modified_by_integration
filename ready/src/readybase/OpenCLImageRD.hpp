@@ -26,7 +26,7 @@
 class OpenCLImageRD : public ImageRD, public OpenCL_MixIn
 {
     public:
-
+        
         OpenCLImageRD(int opencl_platform,int opencl_device,int data_type);
 
         bool HasEditableFormula() const override { return true; }

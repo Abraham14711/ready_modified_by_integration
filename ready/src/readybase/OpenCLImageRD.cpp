@@ -218,7 +218,8 @@ std::vector<vtkSmartPointer<vtkImageData>> OpenCLImageRD::SumImageScalars(const 
     const int NC = this->GetNumberOfChemicals();
     
     //===================
-    std::ofstream file("testing_sum_values.txt");
+    std::ofstream file("/Users/abraham_barrett/Desktop/testing_sum_values.txt", std::ios::app);
+    file << "Sum Values" << std::endl;
     //===================
     std::vector<vtkSmartPointer<vtkImageData>> copied_images(NC, nullptr);
     for (int ic=0; ic < NC; ic++) {
@@ -238,14 +239,14 @@ std::vector<vtkSmartPointer<vtkImageData>> OpenCLImageRD::SumImageScalars(const 
                 for(int iz = 0; iz < Z; iz++) {
                     float val = this->GetImage(ic)->GetScalarComponentAsFloat(ix,iy,iz,0);
                     iSum += val; 
-                    file <<"chemical: "<<ic <<" X: "<< ix << " Y: "<< iy << " Z: "<< iz << " val: "<<val << std::endl;
+                    //file <<"chemical: "<<ic <<" X: "<< ix << " Y: "<< iy << " Z: "<< iz << " val: "<<val << std::endl;
                     std::cout<<val<<std::endl;
                 }
             }
         }
         
      
-        file<<"Sum: "<< iSum << std::endl;
+        //file<<"Sum: "<< iSum << std::endl;
         
         for ( int ix =0; ix < X; ix++){
             for ( int iy =0; iy < Y; iy++){
@@ -388,6 +389,7 @@ void OpenCLImageRD::InternalUpdate(int n_steps)
 
     cl_int ret;
     int iBuffer;
+    
 
     const int NC = this->GetNumberOfChemicals();
     
@@ -459,17 +461,38 @@ void OpenCLImageRD::InternalUpdate(int n_steps)
 }
 
 // ----------------------------------------------------------------------------------------------------------------
+// -----------------------
+        //these are the variables that are used for monitoring the frequency of calculating integrals.
+        //if the code works too slow, make FREQUENCY_OF_INTEGRAL_COUNTING bigger.  
+const int FREQUENCY_OF_INTEGRAL_COUNTING = 50;
+int temporalcnt = 0;
+        // -----------------------
 
 void OpenCLImageRD::ReadFromOpenCLBuffers()
 {
     // read from opencl buffers into our image
     const size_t MEM_SIZE = this->data_type_size * this->GetX() * this->GetY() * this->GetZ();
+    bool fl =false;
+    std::vector<vtkSmartPointer<vtkImageData>> data_integrals;
+    if (FREQUENCY_OF_INTEGRAL_COUNTING == temporalcnt){
+        fl =true;
+        data_integrals = this->SumImageScalars(this->images);
+        temporalcnt=0;
+    }
     for(int ic=0;ic<this->GetNumberOfChemicals();ic++)
     {
         void* data = this->images[ic]->GetScalarPointer();
         cl_int ret = clEnqueueReadBuffer(this->command_queue,this->buffers[this->iCurrentBuffer][ic], CL_TRUE, 0, MEM_SIZE, data, 0, NULL, NULL);
         throwOnError(ret,"OpenCLImageRD::ReadFromOpenCLBuffers : buffer reading failed: ");
+
+        if (fl){
+            void * temp = data_integrals[ic]->GetScalarPointer();
+            cl_int ret1 = clEnqueueWriteBuffer(this->command_queue,this->intergral_buffers[0][ic], CL_TRUE, 0, MEM_SIZE, temp, 0, NULL, NULL);
+            throwOnError(ret1,"OpenCLImageRD::WriteToOpenCLBuffers : buffer writing failed: ");
+        }
     }
+    temporalcnt ++;
+    
 }
 
 // ----------------------------------------------------------------------------------------------------------------

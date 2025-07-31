@@ -50,6 +50,9 @@
         "unordered_map": "cpp",
         "variant": "cpp",
         "memory": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "fstream": "cpp",
+        "iomanip": "cpp",
+        "iostream": "cpp"
     }
 }
