@@ -218,8 +218,9 @@ std::vector<vtkSmartPointer<vtkImageData>> OpenCLImageRD::SumImageScalars(const 
     const int NC = this->GetNumberOfChemicals();
     
     //===================
-    std::ofstream file("/Users/abraham_barrett/Desktop/testing_sum_values.txt", std::ios::app);
-    file << "Sum Values" << std::endl;
+    //Lines for debug
+    //std::ofstream file("testing_sum_values.txt", std::ios::app);
+    //file << "Sum Values" << std::endl;
     //===================
     std::vector<vtkSmartPointer<vtkImageData>> copied_images(NC, nullptr);
     for (int ic=0; ic < NC; ic++) {
@@ -436,7 +437,10 @@ void OpenCLImageRD::InternalUpdate(int n_steps)
             for (cl_uint i = 0; i < num_args; i++) {
                 size_t size;
                 char* value;
-
+                //===================================
+                // IMPORTANT
+                // P.S. If you want to build it on windows and you obtain an error, you can try to comment the following lines in this function that contain clGetKernelArgInfo (4 lines below) 
+                //===================================
                 // Тип аргумента
                 clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_TYPE_NAME, 0, NULL, &size);
                 value = (char*)malloc(size);
@@ -464,7 +468,7 @@ void OpenCLImageRD::InternalUpdate(int n_steps)
 // -----------------------
         //these are the variables that are used for monitoring the frequency of calculating integrals.
         //if the code works too slow, make FREQUENCY_OF_INTEGRAL_COUNTING bigger.  
-const int FREQUENCY_OF_INTEGRAL_COUNTING = 50;
+const int FREQUENCY_OF_INTEGRAL_COUNTING = 35;
 int temporalcnt = 0;
         // -----------------------
 
