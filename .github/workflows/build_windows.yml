@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - gh-pages
+      - feature/cicd_test
   pull_request:
     branches:
       - gh-pages
+      - feature/cicd_test
 
 env:
   WXVERSION: 3.2.4
