@@ -3,12 +3,10 @@ name: macOS
 on:
   push:
     branches:
-      - gh-pages
-      - feature/cicd_test
+      - 'feature/**'
   pull_request:
     branches:
-      - gh-pages
-      - feature/cicd_test
+      - 'feature/**'
 
 jobs:
   build:
