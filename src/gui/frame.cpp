@@ -108,13 +108,6 @@
 
 using namespace std;
 
-// define for macos execution
-// ----------------------------
-#ifdef __WXMAC__
-    #define _T wxString
-#endif
-// ----------------------------
-
 // ---------------------------------------------------------------------
 
 wxString PaneName(int id)
@@ -3533,11 +3526,3 @@ void MyFrame::OnUpdateConvertToFullKernel(wxUpdateUIEvent& event)
 }
 
 // ---------------------------------------------------------------------
-
-
-// undef the current _T macro for macos compilation
-// --------------------
-#ifdef __WXMAC__
-    #undef _T
-#endif
-// --------------------
