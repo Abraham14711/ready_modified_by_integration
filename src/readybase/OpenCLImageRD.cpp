@@ -371,15 +371,15 @@ void OpenCLImageRD::InternalUpdate(int n_steps)
                 // IMPORTANT
                 // P.S. If you want to build it on windows and you obtain an error, you can try to comment the following lines in this function that contain clGetKernelArgInfo (4 lines below) 
                 //===================================
-                clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_TYPE_NAME, 0, NULL, &size);
+                //clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_TYPE_NAME, 0, NULL, &size);
                 value = (char*)malloc(size);
-                clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_TYPE_NAME, size, value, NULL);
+                //clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_TYPE_NAME, size, value, NULL);
                 oss<< "Arg:" << i <<" type: "<< value<<"\n";
                 free(value);
 
-                clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_NAME, 0, NULL, &size);
+                //clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_NAME, 0, NULL, &size);
                 value = (char*)malloc(size);
-                clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_NAME, size, value, NULL);
+                //clGetKernelArgInfo(kernel, i, CL_KERNEL_ARG_NAME, size, value, NULL);
                 oss<< "Arg:" << i <<" type: "<< value<<"\n";
                 free(value);
             }
